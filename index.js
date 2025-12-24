@@ -6,29 +6,48 @@ import webpush from "web-push";
 
 const app = express();
 
-/* ---------- MIDDLEWARE ---------- */
-app.use(cors());
-app.use(express.json()); // 🔥 REQUIRED FOR POST BODY
+/* ================== GLOBAL STATE ================== */
+let lastNoticeLink = null;
+const subscriptions = [];
 
-/* ---------- VAPID ---------- */
+/* ================== MIDDLEWARE ================== */
+app.use(cors());
+app.use(express.json()); // REQUIRED for POST body
+
+/* ================== VAPID ================== */
 webpush.setVapidDetails(
   "mailto:jakir.work@gmail.com",
   "BD131CzVAY3DOY529GcBnb8xr7MdZlYu6Wtqgk0KamgAXz0ISjfz2Zjh3AVmGr-kifZS3tntsbuaL69b_qmF6pE",
   "7AwksgCAnHJ1cNuXaydGjGpTMvAFx4O0QXF5HFwclaM"
 );
 
-/* ---------- BASIC ROUTE ---------- */
+/* ================== BASIC ROUTE ================== */
 app.get("/", (req, res) => {
   res.send("Galsi Notice Server is running");
 });
 
-/* ---------- SCRAPER ---------- */
-const URL = "https://galsimahavidyalaya.ac.in/category/notice/";
-const subscriptions = [];
+/* ================== PUSH SENDER ================== */
+async function sendPushToAll(title) {
+  const payload = JSON.stringify({
+    title: "New College Notice",
+    body: title
+  });
+
+  for (const sub of subscriptions) {
+    try {
+      await webpush.sendNotification(sub, payload);
+    } catch (err) {
+      console.error("Push failed:", err.message);
+    }
+  }
+}
+
+/* ================== SCRAPER ================== */
+const NOTICE_URL = "https://galsimahavidyalaya.ac.in/category/notice/";
 
 app.get("/notices", async (req, res) => {
   try {
-    const { data } = await axios.get(URL);
+    const { data } = await axios.get(NOTICE_URL);
     const $ = cheerio.load(data);
 
     const notices = [];
@@ -44,13 +63,29 @@ app.get("/notices", async (req, res) => {
       notices.push({ date, title, link });
     });
 
+    /* ---------- AUTO PUSH LOGIC ---------- */
+    if (notices.length > 0) {
+      const latest = notices[0];
+
+      if (lastNoticeLink !== latest.link) {
+        lastNoticeLink = latest.link;
+        console.log("🔔 New notice detected:", latest.title);
+
+        if (subscriptions.length > 0) {
+          await sendPushToAll(latest.title);
+          console.log("📤 Push sent to subscribers");
+        }
+      }
+    }
+
     res.json(notices);
-  } catch {
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Failed to fetch notices" });
   }
 });
 
-/* ---------- PUSH SUBSCRIBE ---------- */
+/* ================== PUSH SUBSCRIBE ================== */
 app.post("/subscribe", (req, res) => {
   const subscription = req.body;
 
@@ -64,14 +99,14 @@ app.post("/subscribe", (req, res) => {
 
   if (!exists) {
     subscriptions.push(subscription);
-    console.log("New push subscriber added");
+    console.log("✅ New push subscriber added");
   }
 
   res.status(201).json({ success: true });
 });
 
-/* ---------- START SERVER ---------- */
+/* ================== START SERVER ================== */
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
