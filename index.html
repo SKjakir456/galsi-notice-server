@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Galsi Mahavidyalaya – Student Hub</title>
+
+  <meta name="author" content="Jakir – Unofficial Student Hub">
+  <meta name="description" content="Unofficial student hub for Galsi Mahavidyalaya. Notices, results, routine, updates.">
+
+  <link rel="stylesheet" href="style.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body>
+
+<!-- ================= STATUS BAR ================= -->
+<header class="status-bar glass">
+  <div class="status-left">
+    <i data-lucide="clock"></i>
+    <span id="currentDate"></span>
+  </div>
+  <div class="status-right">
+    <i data-lucide="bell"></i>
+    <span class="notification-badge" id="notifBadge">0</span>
+  </div>
+</header>
+
+<!-- ================= HERO ================= -->
+<section class="hero-section">
+  <h1>
+    Welcome to
+    <span class="hero-accent">Galsi Mahavidyalaya</span>
+  </h1>
+  <p>Your daily academic command center</p>
+</section>
+
+<!-- ================= ACTION CARDS ================= -->
+<section class="action-section glass">
+
+  <a href="#"
+     class="popup-trigger glass glass-card glass-blue reveal"
+     data-title="Results"
+     data-link="https://galsimahavidyalaya.ac.in/academic/registration-and-result/result/">
+    <span class="card-label">Results</span>
+  </a>
+
+  <a href="#"
+     class="popup-trigger glass glass-card glass-green reveal"
+     data-title="Class Routine"
+     data-link="https://galsimahavidyalaya.ac.in/academic/routine/">
+    <span class="card-label">Class Routine</span>
+  </a>
+
+  <a href="#"
+     class="popup-trigger glass glass-card glass-purple reveal"
+     data-title="Feedback"
+     data-link="https://galsimahavidyalaya.ac.in/feedback/feedback/factfdbk.php">
+    <span class="card-label">Feedback</span>
+  </a>
+
+  <a href="#"
+     class="popup-trigger glass glass-card glass-orange reveal"
+     data-title="Admission"
+     data-link="https://galsimahavidyalaya.ac.in/academic/admission/">
+    <span class="card-label">Admission</span>
+  </a>
+
+</section>
+
+<!-- ================= LATEST NOTICES ================= -->
+<section class="notice-section glass reveal">
+  <h2 style="margin-bottom:12px;">Latest Notices</h2>
+
+  <div id="noticeList">
+    <p style="opacity:.6">Loading notices…</p>
+  </div>
+
+  <a href="https://galsimahavidyalaya.ac.in/category/notice/"
+     target="_blank"
+     style="display:block;margin-top:12px;font-weight:600;">
+    View all notices →
+  </a>
+</section>
+
+<!-- ================= CTA ================= -->
+<section class="cta-section reveal">
+  <h2>Stay Updated</h2>
+  <p>All actions redirect to the official college website</p>
+</section>
+
+<!-- ================= FOOTER ================= -->
+<footer class="site-footer glass">
+  <div class="footer-content">
+    <p><strong>Unofficial Student Hub</strong></p>
+    <p class="footer-small">Built & maintained by Jakir</p>
+    <p class="footer-small">All content belongs to Galsi Mahavidyalaya</p>
+  </div>
+</footer>
+
+<!-- ================= POPUP ================= -->
+<div class="popup-overlay" id="popupOverlay">
+  <div class="popup glass">
+    <button class="popup-close" id="popupClose">×</button>
+    <h3 id="popupTitle">Redirect</h3>
+    <p>You are opening the official college website.</p>
+    <div class="popup-actions">
+      <button class="popup-cancel" id="popupCancel">Cancel</button>
+      <a id="popupLink" target="_blank">
+        <button class="popup-go">Continue</button>
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- ================= TOAST ================= -->
+<div class="toast" id="toast">
+  <div class="toast-icon">🔔</div>
+  <div>
+    <strong id="toastTitle"></strong>
+    <p id="toastMessage"></p>
+  </div>
+</div>
+
+<!-- ================= JS ================= -->
+<script>
+/* ---------- BASIC SETUP ---------- */
+document.getElementById("currentDate").innerText =
+  new Date().toDateString();
+
+lucide.createIcons();
+
+/* ---------- SCROLL REVEAL ---------- */
+const revealEls = document.querySelectorAll(".reveal");
+const revealObserver = new IntersectionObserver(
+  entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add("show");
+      }
+    });
+  },
+  { threshold: 0.15 }
+);
+revealEls.forEach(el => revealObserver.observe(el));
+
+/* ---------- POPUP ---------- */
+const overlay = document.getElementById("popupOverlay");
+const popupTitle = document.getElementById("popupTitle");
+const popupLink = document.getElementById("popupLink");
+
+document.querySelectorAll(".popup-trigger").forEach(btn => {
+  btn.onclick = e => {
+    e.preventDefault();
+    popupTitle.innerText = btn.dataset.title;
+    popupLink.href = btn.dataset.link;
+    overlay.classList.add("show");
+  };
+});
+
+["popupClose", "popupCancel"].forEach(id => {
+  document.getElementById(id).onclick = () =>
+    overlay.classList.remove("show");
+});
+
+/* ---------- TOAST ---------- */
+const toast = document.getElementById("toast");
+const toastTitle = document.getElementById("toastTitle");
+const toastMessage = document.getElementById("toastMessage");
+const badge = document.getElementById("notifBadge");
+
+function showNotification(title, msg) {
+  toastTitle.innerText = title;
+  toastMessage.innerText = msg;
+  toast.classList.add("show");
+  setTimeout(() => toast.classList.remove("show"), 3500);
+}
+
+/* ---------- BROWSER NOTIFICATION ---------- */
+if ("Notification" in window && Notification.permission !== "granted") {
+  Notification.requestPermission();
+}
+
+function sendBrowserNotification(title) {
+  if (!("Notification" in window)) return;
+  if (Notification.permission !== "granted") return;
+
+  new Notification("Galsi Mahavidyalaya", {
+    body: title
+  });
+}
+
+/* ---------- NOTICES (LOVABLE METHOD) ---------- */
+const NOTICE_API = "http://localhost:3000/notices";
+
+function loadNotices() {
+  fetch(NOTICE_API)
+    .then(res => res.json())
+    .then(data => {
+      const list = document.getElementById("noticeList");
+      list.innerHTML = "";
+
+      if (!Array.isArray(data) || !data.length) {
+        list.innerHTML = "<p>No notices available</p>";
+        return;
+      }
+
+      const lastSeen = localStorage.getItem("lastNotice");
+
+      data.forEach(item => {
+        const div = document.createElement("div");
+        div.className = "glass";
+        div.style.padding = "12px";
+        div.style.marginBottom = "10px";
+        div.style.cursor = "pointer";
+
+        div.innerHTML = `
+          <strong>${item.title}</strong><br>
+          <small>${item.date}</small>
+        `;
+
+        div.onclick = () => window.open(item.link, "_blank");
+        list.appendChild(div);
+      });
+
+      badge.innerText = data.length;
+
+      if (lastSeen !== data[0].link) {
+        localStorage.setItem("lastNotice", data[0].link);
+        showNotification("New Notice", data[0].title);
+        sendBrowserNotification(data[0].title);
+      }
+    })
+    .catch(() => {
+      document.getElementById("noticeList").innerHTML =
+        "<p>Unable to load notices</p>";
+    });
+}
+
+/* initial load + auto refresh */
+loadNotices();
+setInterval(loadNotices, 3 * 60 * 1000);
+</script>
+
+</body>
+</html>
